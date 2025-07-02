@@ -6,16 +6,9 @@ import spacy
 import re
 import matplotlib.pyplot as plt
 import pandas as pd
-from spacy.cli import download
-from spacy.util import is_package
 
-# -----------------------------
-# Load or download spaCy model
-# -----------------------------
-MODEL_NAME = "en_core_web_sm"
-if not is_package(MODEL_NAME):
-    download(MODEL_NAME)
-nlp = spacy.load(MODEL_NAME)
+# Load spaCy model
+nlp = spacy.load("en_core_web_sm")
 
 # -----------------------------
 # Text Extractors
@@ -83,7 +76,7 @@ if st.sidebar.button("Rank Resumes"):
             elif file_name.endswith(".csv"):
                 text = extract_text_from_csv(file)
             else:
-                st.warning(f" Unsupported file format: {file_name}")
+                st.warning(f"Unsupported file format: {file_name}")
                 continue
 
             processed_text = preprocess_text(text)
@@ -98,7 +91,7 @@ if st.sidebar.button("Rank Resumes"):
 
         # Display results
         df = pd.DataFrame(results).sort_values(by="Score (%)", ascending=False).reset_index(drop=True)
-        st.subheader("📄 Resume Match Results")
+        st.subheader("Resume Match Results")
         st.dataframe(df)
 
         # Bar chart
@@ -106,6 +99,3 @@ if st.sidebar.button("Rank Resumes"):
         ax.bar(df["File Name"], df["Score (%)"], color="#6C63FF")
         plt.xticks(rotation=45, ha='right')
         plt.xlabel("Resumes")
-        plt.ylabel("Similarity Score (%)")
-        plt.title("Resume Screening Overview")
-        st.pyplot(fig)
