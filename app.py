@@ -1,7 +1,3 @@
-import spacy
-import spacy.cli
-spacy.cli.download("en_core_web_sm")
-nlp = spacy.load("en_core_web_sm")
 import streamlit as st
 import PyPDF2
 import docx
@@ -10,12 +6,20 @@ import spacy
 import re
 import matplotlib.pyplot as plt
 import pandas as pd
+from spacy.cli import download
+from spacy.util import is_package
 
+# -----------------------------
+# Load or download spaCy model
+# -----------------------------
+MODEL_NAME = "en_core_web_sm"
+if not is_package(MODEL_NAME):
+    download(MODEL_NAME)
+nlp = spacy.load(MODEL_NAME)
 
-# Load SpaCy model
-nlp = spacy.load("en_core_web_sm")
-
-# Text extractors
+# -----------------------------
+# Text Extractors
+# -----------------------------
 def extract_text_from_pdf(file):
     reader = PyPDF2.PdfReader(file)
     return ' '.join([page.extract_text() or "" for page in reader.pages])
@@ -32,6 +36,9 @@ def extract_text_from_csv(file):
         text.append(' '.join(row))
     return ' '.join(text)
 
+# -----------------------------
+# Text Processing
+# -----------------------------
 def preprocess_text(text):
     text = re.sub(r'\s+', ' ', text)
     text = re.sub(r'[^\w\s]', '', text)
@@ -39,24 +46,26 @@ def preprocess_text(text):
 
 def extract_keywords(text):
     doc = nlp(text)
-    return {token.text for token in doc if token.is_alpha and not token.is_stop}
+    return {token.lemma_.lower() for token in doc if token.is_alpha and not token.is_stop}
 
 def score_resume(resume_text, keywords):
     words = set(resume_text.split())
     matched_keywords = words & keywords
     return len(matched_keywords), matched_keywords
 
-# Streamlit App UI
+# -----------------------------
+# Streamlit UI
+# -----------------------------
 st.set_page_config(page_title="Resume Ranker", layout="wide")
 st.title("Resume Ranking Dashboard")
-st.markdown("A smart tool that scores resumes against a given job description using NLP-powered similarity metrics.")
+st.markdown("An NLP-powered tool that scores resumes against a job description.")
 
-# Sidebar inputs
+# Sidebar
 st.sidebar.header("Upload Inputs")
 job_description = st.sidebar.text_area("Paste Job Description Here", height=200)
-uploaded_files = st.sidebar.file_uploader("Upload Resumes (PDF, DOCX, or CSV)", type=["pdf", "docx", "csv"], accept_multiple_files=True)
+uploaded_files = st.sidebar.file_uploader("Upload Resumes (PDF, DOCX, CSV)", type=["pdf", "docx", "csv"], accept_multiple_files=True)
 
-# Processing logic
+# Processing resumes
 if st.sidebar.button("Rank Resumes"):
     if not job_description or not uploaded_files:
         st.warning("Please provide both a job description and resume files.")
@@ -74,7 +83,7 @@ if st.sidebar.button("Rank Resumes"):
             elif file_name.endswith(".csv"):
                 text = extract_text_from_csv(file)
             else:
-                st.warning(f"Unsupported file format: {file_name}")
+                st.warning(f" Unsupported file format: {file_name}")
                 continue
 
             processed_text = preprocess_text(text)
@@ -84,15 +93,15 @@ if st.sidebar.button("Rank Resumes"):
             results.append({
                 "File Name": file_name,
                 "Score (%)": round(score_percent, 2),
-                "Matched Keywords": ', '.join(matched)
+                "Matched Keywords": ', '.join(sorted(matched))
             })
 
-        # Sort & show results
+        # Display results
         df = pd.DataFrame(results).sort_values(by="Score (%)", ascending=False).reset_index(drop=True)
-        st.subheader("Resume Match Results")
+        st.subheader("📄 Resume Match Results")
         st.dataframe(df)
 
-        # Chart
+        # Bar chart
         fig, ax = plt.subplots()
         ax.bar(df["File Name"], df["Score (%)"], color="#6C63FF")
         plt.xticks(rotation=45, ha='right')
