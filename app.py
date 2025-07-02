@@ -95,7 +95,14 @@ if st.sidebar.button("Rank Resumes"):
         st.dataframe(df)
 
         # Bar chart
-        fig, ax = plt.subplots()
-        ax.bar(df["File Name"], df["Score (%)"], color="#6C63FF")
-        plt.xticks(rotation=45, ha='right')
-        plt.xlabel("Resumes")
+        if not df.empty:
+            st.subheader("📊 Similarity Score Bar Chart")
+            fig, ax = plt.subplots()
+            ax.bar(df["File Name"], df["Score (%)"], color="#6C63FF")
+            plt.xticks(rotation=45, ha='right')
+            plt.xlabel("Resumes")
+            plt.ylabel("Similarity Score (%)")
+            plt.title("Resume Screening Overview")
+            st.pyplot(fig)
+        else:
+            st.info("No data to visualize.")
